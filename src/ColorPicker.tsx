@@ -260,7 +260,6 @@ const ColorPickerTool = () => {
                   label={currentPath.join('.')}
                   value={value}
                   onClick={() => handleClickOpen(value, currentPath)}
-                  readOnly
                   fullWidth
                 />
                 <div
