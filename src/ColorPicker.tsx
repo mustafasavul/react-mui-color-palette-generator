@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { SketchPicker } from 'react-color';
-import {
-  Typography,
-  Grid,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-} from '@material-ui/core';
+import { Typography, Grid, Button, TextField, Dialog, DialogTitle, DialogContent, Checkbox, FormControlLabel } from '@material-ui/core';
 
 const ColorPickerTool = () => {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [themeName, setThemeName] = useState('');
+  const [showCategories, setShowCategories] = useState({
+    primary: true,
+    secondary: true,
+    info: true,
+    success: true,
+    warning: true,
+    error: true,
+    white: true,
+    grey: true,
+    text: true,
+    common: true,
+    background: true,
+    action: true,
+  });
+
   const [palette, setPalette] = useState({
     light: {
       primary: {
@@ -113,7 +120,6 @@ const ColorPickerTool = () => {
       },
     },
     dark: {
-      // dark mode palette values...
       primary: {
         main: '#90caf9',
         light: '#e3f2fd',
@@ -244,39 +250,32 @@ const ColorPickerTool = () => {
     return Object.keys(colors).map((key) => {
       const value = colors[key];
       const currentPath = [...path, key];
-      if (typeof value === 'string') {
+      if (typeof value === 'string' && showCategories[currentPath[0]]) {
         return (
-          <>
-            <Grid
-              item
-              xs={4}
-              sm={6}
-              md={4}
-              spacing={2}
-              key={currentPath.join('.')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextField
-                  label={currentPath.join('.')}
-                  value={value}
-                  onClick={() => handleClickOpen(value, currentPath)}
-                  fullWidth
-                />
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    backgroundColor: value,
-                    marginLeft: 8,
-                    border: '1px solid #ccc',
-                  }}
-                />
-              </div>
-            </Grid>
-          </>
+          <Grid item xs={12} sm={6} md={4} key={currentPath.join('.')}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <TextField
+                label={currentPath.join('.')}
+                value={value}
+                onClick={() => handleClickOpen(value, currentPath)}
+                fullWidth
+              />
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  backgroundColor: value,
+                  marginLeft: 8,
+                  border: '1px solid #ccc',
+                }}
+              />
+            </div>
+          </Grid>
         );
-      } else {
+      } else if (typeof value !== 'string') {
         return renderColorFields(value, currentPath);
+      } else {
+        return null;
       }
     });
   };
@@ -284,14 +283,20 @@ const ColorPickerTool = () => {
   const handleSave = () => {
     const themeId = Date.now();
     const finalThemeName = themeName || `Theme${themeId}`;
+    const filteredPalette = Object.keys(palette[mode]).reduce((acc, key) => {
+      if (showCategories[key]) {
+        acc[key] = palette[mode][key];
+      }
+      return acc;
+    }, {} as any);
+
     const data = {
       themeName: finalThemeName,
       mode,
-      palette: palette[mode],
+      palette: filteredPalette,
     };
 
     const json = JSON.stringify(data, null, 2);
-    console.log(json);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
@@ -306,16 +311,10 @@ const ColorPickerTool = () => {
     <Grid container spacing={2}>
       <Grid item xs={12}>
         <Typography variant="h6">Theme Mode</Typography>
-        <Button
-          variant={mode === 'light' ? 'contained' : 'outlined'}
-          onClick={() => setMode('light')}
-        >
+        <Button variant={mode === 'light' ? 'contained' : 'outlined'} onClick={() => setMode('light')}>
           Light Mode
         </Button>
-        <Button
-          variant={mode === 'dark' ? 'contained' : 'outlined'}
-          onClick={() => setMode('dark')}
-        >
+        <Button variant={mode === 'dark' ? 'contained' : 'outlined'} onClick={() => setMode('dark')}>
           Dark Mode
         </Button>
       </Grid>
@@ -327,24 +326,34 @@ const ColorPickerTool = () => {
           fullWidth
         />
       </Grid>
+      {Object.keys(showCategories).map((category) => (
+        <Grid item xs={4} key={category}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={showCategories[category]}
+                onChange={(e) =>
+                  setShowCategories((prev) => ({
+                    ...prev,
+                    [category]: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label={`Show ${category.charAt(0).toUpperCase() + category.slice(1)} Colors`}
+          />
+        </Grid>
+      ))}
       {renderColorFields(palette[mode])}
       <Grid item xs={12}>
-        <div style={{
-          textAlign: 'right',
-          marginTop: 16,
-        }}>
-          <Button variant="contained" color="primary" onClick={handleSave}>
-            Save Colors
-          </Button>
-        </div>
+        <Button variant="contained" color="primary" onClick={handleSave}>
+          Save Colors
+        </Button>
       </Grid>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Pick a Color</DialogTitle>
         <DialogContent>
-          <SketchPicker
-            color={currentColor}
-            onChangeComplete={handleColorChange}
-          />
+          <SketchPicker color={currentColor} onChangeComplete={handleColorChange} />
         </DialogContent>
       </Dialog>
     </Grid>
